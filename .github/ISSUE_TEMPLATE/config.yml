@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: ❓ Question d'utilisation ou d'installation
+    url: https://forum.hacf.fr/
+    about: Pour les questions générales d'utilisation, d'installation ou de configuration, merci d'utiliser le forum Home Assistant Communauté Francophone plutôt qu'une issue.
+  - name: 🌍 Vérifier la disponibilité des données
+    url: https://www.atmo-france.org/
+    about: Avant d'ouvrir un bug, vérifiez que les données (pollution ou pollen) sont bien présentes pour votre commune sur le site Atmo France.
