@@ -1,0 +1,92 @@
+name: 🐞 Rapport de bug
+description: Signaler un dysfonctionnement de l'intégration Atmo France
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de prendre le temps de remplir ce rapport de bug.
+        Plus les informations fournies sont précises, plus le diagnostic sera rapide.
+
+  - type: checkboxes
+    id: verifications
+    attributes:
+      label: Vérifications préalables
+      description: Merci de confirmer les points suivants avant de soumettre le rapport.
+      options:
+        - label: J'ai vérifié la présence des données (pollution ou pollen) pour la ville concernée sur [le site Atmo France](https://www.atmo-france.org/)
+          required: true
+        - label: J'ai recherché dans les [issues existantes](https://github.com/sebcaps/atmofrance/issues) et ce problème n'a pas déjà été signalé
+          required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description du problème
+      description: Décrivez le comportement observé et le comportement attendu.
+      placeholder: Ex. le capteur de pollution reste indisponible alors que les données sont présentes sur le site Atmo France.
+    validations:
+      required: true
+
+  - type: input
+    id: code-postal
+    attributes:
+      label: Code postal
+      description: Code postal de la commune concernée.
+      placeholder: ex. 75001
+    validations:
+      required: true
+
+  - type: input
+    id: ville
+    attributes:
+      label: Nom de la ville
+      placeholder: ex. Paris
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version de l'intégration
+      description: Visible dans HACS, ou dans le fichier manifest.json du composant.
+      placeholder: ex. V2.1.3
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type-capteur
+    attributes:
+      label: Type de capteur concerné
+      description: Plusieurs choix possibles.
+      multiple: true
+      options:
+        - Pollution
+        - Pollen
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type-donnees
+    attributes:
+      label: Type de données concerné
+      description: Plusieurs choix possibles.
+      multiple: true
+      options:
+        - Valeur actuelle (jour J)
+        - Prévision (jour J+1)
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Journaux (logs)
+      description: |
+        Copiez/collez les logs pertinents de Home Assistant (Paramètres → Système → Journaux),
+        idéalement en activant le mode debug pour `custom_components.atmofrance`.
+        Le contenu sera automatiquement formaté en bloc de code, inutile d'ajouter des backticks.
+      render: shell
+    validations:
+      required: false
