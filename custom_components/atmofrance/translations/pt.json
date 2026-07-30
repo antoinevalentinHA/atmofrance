@@ -29,6 +29,9 @@
                 "title": "Muitos Resultados encontrados",
                 "description": "Seleciona a cidade"
             }
+        },
+        "abort": {
+            "already_configured": "Esta cidade já está configurada"
         }
     }
 }

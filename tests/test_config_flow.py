@@ -11,6 +11,7 @@ from aiohttp.client import ClientError
 from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.atmofrance.api import TooManyRequestsError
 from custom_components.atmofrance.const import (
@@ -125,6 +126,40 @@ async def test_full_flow_creates_an_entry(hass):
     assert result["data"]["city"] == "Bordeaux"
     assert result["options"][CONF_INCLUDE_POLLUTION] is True
     assert result["options"][CONF_INCLUDE_POLLEN] is False
+
+
+async def test_the_same_commune_cannot_be_added_twice(hass):
+    """Nothing used to stop a second entry for the same INSEE code."""
+    MockConfigEntry(domain=DOMAIN, unique_id="33063",
+                    data={}, version=3).add_to_hass(hass)
+
+    result = await start(hass)
+    with patch_token():
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], CREDENTIALS)
+    with patch_insee():
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_CODE_POSTAL: "33000"})
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+
+
+async def test_the_entry_is_keyed_on_the_insee_code(hass):
+    result = await start(hass)
+    with patch_token():
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], CREDENTIALS)
+    with patch_insee():
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_CODE_POSTAL: "33000"})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_INCLUDE_POLLUTION: True})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {})
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert hass.config_entries.async_entries(DOMAIN)[0].unique_id == "33063"
 
 
 async def test_selecting_no_indicator_is_rejected(hass):

@@ -187,6 +187,9 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
         self.data[CONF_INSEE_CODE] = city_infos[0]
         self.data[CONF_CITY] = city_infos[1]
         self.data[CONF_INSEE_EPCI] = city_infos[2]
+        # One entry per commune: the INSEE code is what the API is keyed on.
+        await self.async_set_unique_id(self.data[CONF_INSEE_CODE])
+        self._abort_if_unique_id_configured()
         return await self.async_step_location(self.data)
 
     async def async_step_sensors_type(self, user_input=None):

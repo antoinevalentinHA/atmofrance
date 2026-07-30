@@ -159,3 +159,35 @@ async def test_forecast_entities_get_a_distinct_name_and_id(hass):
     assert today._attr_name != tomorrow._attr_name
     assert today._attr_unique_id != tomorrow._attr_unique_id
     assert tomorrow._attr_name.endswith("J+1")
+
+
+# ------------------------------------------------- entity naming model ----
+async def test_entity_names_do_not_repeat_the_city(hass):
+    """has_entity_name lets the device carry the city."""
+    entity = make_entity(hass, AtmoFrancePollutionEntity, PM10, {})
+
+    assert entity._attr_has_entity_name is True
+    assert entity._attr_name == "PM10"
+    assert "Bordeaux" not in entity._attr_name
+
+
+async def test_the_device_carries_the_city(hass):
+    entity = make_entity(hass, AtmoFrancePollutionEntity, PM10, {})
+
+    assert "Bordeaux" in entity._attr_device_info["name"]
+
+
+async def test_renaming_does_not_change_the_unique_id(hass):
+    """Existing entities must keep their entity_id and their history."""
+    entity = make_entity(hass, AtmoFrancePollutionEntity, PM10, {})
+
+    assert entity._attr_unique_id.endswith("-33063-PM10")
+
+
+# ------------------------------------------------ pollen concentrations ----
+async def test_pollen_concentration_is_not_a_volatile_organic_compound(hass):
+    """Pollen is counted in grains, not measured as a VOC in ug/m3."""
+    for description in POLLEN_CONC_SENSORS:
+        assert description.device_class is None, description.key
+        assert description.native_unit_of_measurement == "grains/m³", (
+            description.key)
