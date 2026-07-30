@@ -153,7 +153,7 @@ async def test_retry_succeeds_once_the_api_answers(hass):
     assert entry.state is ConfigEntryState.SETUP_RETRY
 
     with patch_api({(CITY_CODE, URL_CODE.POLLUTION): FEATURES}):
-        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.config_entries.async_reload(entry.entry_id)
         await hass.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
