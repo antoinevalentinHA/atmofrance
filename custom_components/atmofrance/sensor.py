@@ -120,8 +120,19 @@ class AtmoFranceEntity(CoordinatorEntity, SensorEntity):
         _LOGGER.debug("In base entity Creating an atmo France sensor, named %s",
                       self._attr_name)
 
+    def _raw_value(self):
+        """Read the raw API value, or None when it is not published yet."""
+        raw = self._coordinator.api.get_key_value(
+            self.entity_description.json_key, self._shift)
+        if raw == "" or raw is None:
+            # Nothing to warn about: forecasts are published during the day,
+            # so J+1 is legitimately missing every morning.
+            _LOGGER.debug("No value available yet for %s", self._attr_name)
+            return None
+        return raw
+
     def _level2color(self, value):
-        return LEVEL_COLOR[value]
+        return LEVEL_COLOR.get(value)
 
 
 class AtmoFrancePollutionEntity(AtmoFranceEntity):
@@ -139,30 +150,32 @@ class AtmoFrancePollutionEntity(AtmoFranceEntity):
 
     @property
     def native_value(self):
-        if self._coordinator.api.get_key_value(self.entity_description.json_key, self._shift) != '':
-            value = int(self._coordinator.api.get_key_value(
-                self.entity_description.json_key, self._shift))
-        else:
-            value = 0
-            _LOGGER.warning(
-                "Unable to get value for %s. Force value to 0", self._attr_name
-            )
+        raw = self._raw_value()
+        if raw is None:
+            return None
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            _LOGGER.warning("Unexpected value %r for %s",
+                            raw, self._attr_name)
+            return None
         _LOGGER.debug("Value for pollution sensor %s is now %s",
                       self._attr_name, value)
         return value
 
     @property
     def extra_state_attributes(self):
+        value = self.native_value
         return {
             "Date de mise à jour": self._coordinator.api.last_update,
-            "Libellé": self._level2string(self.native_value),
-            "Couleur": self._level2color(self.native_value),
+            "Libellé": self._level2string(value),
+            "Couleur": self._level2color(value),
             "Type de zone": self._coordinator.api.type_zone,
             "Nom de la zone": self._coordinator.api.nom_zone,
         }
 
     def _level2string(self, value):
-        return POLLUTION_LEVEL[value]
+        return POLLUTION_LEVEL.get(value)
 
 
 class AtmoFrancePollenLevelEntity(AtmoFranceEntity):
@@ -180,31 +193,33 @@ class AtmoFrancePollenLevelEntity(AtmoFranceEntity):
 
     @property
     def native_value(self):
-        if self._coordinator.api.get_key_value(self.entity_description.json_key, self._shift) != '':
+        raw = self._raw_value()
+        if raw is None:
+            return None
+        try:
             # Pollen alert levels are expressed as float cast them to int.
-            value = int(self._coordinator.api.get_key_value(
-                self.entity_description.json_key, self._shift))
-        else:
-            value = 0
-            _LOGGER.warning(
-                "Unable to get value for %s. Force value to 0", self._attr_name
-            )
+            value = int(raw)
+        except (TypeError, ValueError):
+            _LOGGER.warning("Unexpected value %r for %s",
+                            raw, self._attr_name)
+            return None
         _LOGGER.debug("Value for pollen level sensor %s is now %s",
                       self._attr_name, value)
         return value
 
     @property
     def extra_state_attributes(self):
+        value = self.native_value
         return {
             "Date de mise à jour": self._coordinator.api.last_update,
-            "Libellé": self._level2string(self.native_value),
-            "Couleur": self._level2color(self.native_value),
+            "Libellé": self._level2string(value),
+            "Couleur": self._level2color(value),
             "Type de zone": self._coordinator.api.type_zone,
             "Nom de la zone": self._coordinator.api.nom_zone,
         }
 
     def _level2string(self, value):
-        return POLLEN_LEVEL[value]
+        return POLLEN_LEVEL.get(value)
 
 
 class AtmoFrancePollenConcentrationEntity(AtmoFranceEntity):
@@ -221,15 +236,9 @@ class AtmoFrancePollenConcentrationEntity(AtmoFranceEntity):
 
     @property
     def native_value(self):
-        # FIXME real 0 should not fall into else...
-        if self._coordinator.api.get_key_value(self.entity_description.json_key, self._shift) != '':
-            value = self._coordinator.api.get_key_value(
-                self.entity_description.json_key, self._shift)
-        else:
-            value = 0
-            _LOGGER.warning(
-                "Unable to get value for %s. Force value to 0", self._attr_name
-            )
+        # A real 0 is a valid concentration and must reach the state machine;
+        # only an absent value becomes None.
+        value = self._raw_value()
         _LOGGER.debug("Value for sensor %s is now %s",
                       self._attr_name, value)
         return value

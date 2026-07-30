@@ -191,14 +191,12 @@ class AtmoFrancePollutionApiCoordinator (AtmoFranceApiCoordinator):
 
     async def _update_method(self):
         data = await self.api.get_data(self.config.data[self._source], URL_CODE.POLLUTION)
-        if data is not None and len(data) > 0:
-            return True
-        else:
-            self.async_set_update_error(
+        if not data:
+            raise UpdateFailed(
                 f'No Data from Atmo France for INSEE code {
                     self.config.data[self._source]} and date {date.today().strftime("%Y-%m-%d")}'
             )
-        return False
+        return data
 
 
 class AtmoFrancePollenApiCoordinator (AtmoFranceApiCoordinator):
@@ -209,11 +207,9 @@ class AtmoFrancePollenApiCoordinator (AtmoFranceApiCoordinator):
 
     async def _update_method(self):
         data = await self.api.get_data(self.config.data[self._source], URL_CODE.POLLEN)
-        if data is not None and len(data) > 0:
-            return True
-        else:
-            self.async_set_update_error(
+        if not data:
+            raise UpdateFailed(
                 f'No Data from Atmo France for INSEE code {
                     self.config.data[self._source]} and date {date.today().strftime("%Y-%m-%d")}'
             )
-        return False
+        return data

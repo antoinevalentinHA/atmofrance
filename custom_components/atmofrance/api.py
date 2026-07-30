@@ -12,9 +12,12 @@ from .const import AUTH_URL, DATA_URL, API_GOUV_URL, URL_CODE
 DEFAULT_TIMEOUT = 120
 CLIENT_TIMEOUT = ClientTimeout(total=DEFAULT_TIMEOUT)
 
-# Used when the token carries no readable expiry. Deliberately short: an
-# expired token costs one extra round trip, a too-long one costs 401s.
-TOKEN_DEFAULT_TTL = timedelta(minutes=30)
+# Used when the token carries no readable expiry. Must comfortably exceed
+# REFRESH_INTERVALL, otherwise the token is always stale by the time the
+# coordinator polls and the cache buys nothing. Being optimistic is safe here:
+# a token refused early comes back as a 401, which get_data retries after
+# re-authenticating, costing one extra round trip at most.
+TOKEN_DEFAULT_TTL = timedelta(hours=12)
 # Renew slightly early so a token cannot expire in flight.
 TOKEN_EXPIRY_MARGIN = timedelta(seconds=60)
 
