@@ -14,6 +14,8 @@ from custom_components.atmofrance.const import (
     DOMAIN,
     POLLEN_ALERT_SENSORS,
     POLLEN_CONC_SENSORS,
+    POLLEN_FORECAST_DAYS,
+    POLLUTION_FORECAST_DAYS,
     POLLUTION_SENSORS,
 )
 from custom_components.atmofrance.sensor import (
@@ -191,3 +193,28 @@ async def test_pollen_concentration_is_not_a_volatile_organic_compound(hass):
         assert description.device_class is None, description.key
         assert description.native_unit_of_measurement == "grains/m³", (
             description.key)
+
+
+# ------------------------------------------------- forecast horizons ----
+async def test_the_j2_sensor_reads_the_right_day(hass):
+    entity = make_entity(
+        hass, AtmoFrancePollenConcentrationEntity, CONC_GRAM,
+        {("conc_gram", 1): 8.2, ("conc_gram", 2): 12.5}, shift=2)
+
+    assert entity.native_value == 12.5
+    assert entity._attr_name.endswith("J+2")
+
+
+async def test_an_unpublished_j2_is_unknown_not_zero(hass):
+    """Before the noon refresh the API has no J+2 to give."""
+    entity = make_entity(
+        hass, AtmoFrancePollenConcentrationEntity, CONC_GRAM,
+        {("conc_gram", 0): 8.2}, shift=2)
+
+    assert entity.native_value is None
+
+
+async def test_forecast_days_match_what_each_feed_publishes(hass):
+    """Pollution exposes 2 dates, pollen 3. Observed on the live API."""
+    assert POLLUTION_FORECAST_DAYS == 1
+    assert POLLEN_FORECAST_DAYS == 2

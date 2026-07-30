@@ -76,6 +76,17 @@ LEVEL_COLOR = {
 # standard des pollens en grains/m3, pas aux ug/m3 declares jusqu'ici.
 POLLEN_CONCENTRATION_UNIT = "grains/m³"
 
+# Combien de jours de prévision chaque flux publie réellement, observé sur
+# l'API le 30/07/2026 après le rafraîchissement de 12h00 :
+#   pollution (112) -> 2 dates : J et J+1
+#   pollen    (122) -> 3 dates : J, J+1 et J+2
+# Créer des capteurs pour un jour que le flux ne publie jamais ne produirait
+# que des entités éternellement inconnues, d'où la distinction. Un jour
+# annoncé mais pas encore publié remonte None, donc « Inconnu » — pas une
+# valeur inventée.
+POLLUTION_FORECAST_DAYS = 1
+POLLEN_FORECAST_DAYS = 2
+
 REFRESH_INTERVALL = 60
 
 

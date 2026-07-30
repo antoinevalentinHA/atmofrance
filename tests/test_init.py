@@ -15,7 +15,10 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.atmofrance.api import InvalidAuthError
 from custom_components.atmofrance.const import (
+    CONF_INCLUDE_POLLEN,
+    CONF_INCLUDE_POLLEN_FORECAST,
     CONF_INCLUDE_POLLUTION,
+    CONF_INCLUDE_POLLUTION_FORECAST,
     CONF_INSEE_CODE,
     CONF_INSEE_EPCI,
     CONF_POLLEN_COORDINATOR,
@@ -288,3 +291,27 @@ async def test_failed_auth_leaves_no_partial_state_behind(hass):
         await hass.async_block_till_done()
 
     assert entry.entry_id not in hass.data.get(DOMAIN, {})
+
+
+# ------------------------------------------- forecast entity creation ----
+async def test_pollen_forecast_covers_two_days(hass):
+    """Pollen publishes J+1 and J+2; pollution only publishes J+1."""
+    options = {
+        CONF_INCLUDE_POLLUTION: True, CONF_INCLUDE_POLLUTION_FORECAST: True,
+        CONF_INCLUDE_POLLEN: True, CONF_INCLUDE_POLLEN_FORECAST: True,
+    }
+    coverage = {
+        (CITY_CODE, URL_CODE.POLLUTION): FEATURES,
+        (CITY_CODE, URL_CODE.POLLEN): FEATURES,
+    }
+    entry = await setup_entry(hass, coverage, options)
+    assert entry.state is ConfigEntryState.LOADED
+
+    names = {e.entity_id for e in hass.states.async_all("sensor")}
+    j1 = [n for n in names if "j_1" in n]
+    j2 = [n for n in names if "j_2" in n]
+
+    assert j1, "no J+1 entity was created"
+    assert j2, "pollen J+2 entities are missing"
+    # Nothing on the pollution feed goes past J+1.
+    assert not [n for n in j2 if "azote" in n or "ozone" in n or "pm10" in n]
