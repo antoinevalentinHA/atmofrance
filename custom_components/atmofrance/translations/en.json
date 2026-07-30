@@ -9,7 +9,7 @@
             "user": {
                 "data": {
                     "username": "Username",
-                    "password": "Password "
+                    "password": "Password"
                 },
                 "description": "Enter your Atmo Data credentials.",
                 "title": "Authentication"
