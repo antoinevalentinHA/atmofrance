@@ -1,5 +1,6 @@
 import logging
 import voluptuous as vol
+from aiohttp.client import ClientError
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.config_entries import (
@@ -27,7 +28,7 @@ from .const import (
     CONF_INCLUDE_POLLUTION,
     CONF_INCLUDE_POLLUTION_FORECAST,
 )
-from .api import AtmoFranceDataApi, INSEEAPI
+from .api import AtmoFranceDataApi, INSEEAPI, TooManyRequestsError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,23 +58,26 @@ INCLUDED_FORECAST_SENSOR_SCHEMA = vol.Schema(
 
 
 async def validate_credentials(hass: HomeAssistant, data: dict) -> None:
-    """Validate user credential to access API"""
+    """Validate user credential to access API.
+
+    Raises TooManyRequestsError (HTTP 429), ConnectionRefusedError (rejected
+    credentials or any other non-200 answer) or ClientError/TimeoutError
+    (the API could not be reached at all).
+    """
     session = async_get_clientsession(hass)
-    try:
-        client = AtmoFranceDataApi(data, session, hass=hass)
-        await client.async_get_token()
-    except ValueError as exc:
-        raise exc
+    client = AtmoFranceDataApi(data, session, hass=hass)
+    await client.async_get_token()
 
 
 async def get_insee_code(hass: HomeAssistant, data: dict) -> None:
-    """Get Insee code from zip code"""
+    """Get Insee code from zip code.
+
+    Raises ValueError (unknown zip code) or ClientError/TimeoutError (the
+    geo.api.gouv.fr service could not be reached).
+    """
     session = async_get_clientsession(hass)
-    try:
-        client = INSEEAPI(session)
-        return await client.get_data(data)
-    except ValueError as exc:
-        raise exc
+    client = INSEEAPI(session)
+    return await client.get_data(data)
 
 
 def _build_place_key(city) -> str:
@@ -117,8 +121,13 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 await validate_credentials(self.hass, user_input)
-            except ValueError:
+            except TooManyRequestsError:
+                errors["base"] = "too_many_requests"
+            except ConnectionRefusedError:
+                # Non-200 answer from the API: credentials are the usual cause
                 errors["base"] = "auth"
+            except (ClientError, TimeoutError):
+                errors["base"] = "cannot_connect"
             if not errors:
                 self.data = user_input
                 return await self.async_step_location()
@@ -138,6 +147,8 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
                     )
                 except ValueError:
                     errors["base"] = "noinsee"
+                except (ClientError, TimeoutError):
+                    errors["base"] = "cannot_connect"
                 if not errors:
                     return await self.async_step_multilocation()
                 else:
