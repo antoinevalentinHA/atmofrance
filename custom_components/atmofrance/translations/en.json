@@ -45,10 +45,19 @@
                 },
                 "title": "Forecast indicator type selection",
                 "description": "Select sensor type"
+            },
+            "reauth_confirm": {
+                "title": "Re-authentication",
+                "description": "Your Atmo France credentials were rejected. Please enter them again.",
+                "data": {
+                    "username": "Username",
+                    "password": "Password"
+                }
             }
         },
         "abort": {
-            "already_configured": "This city is already configured"
+            "already_configured": "This city is already configured",
+            "reauth_successful": "Re-authentication was successful"
         }
     },
     "options": {

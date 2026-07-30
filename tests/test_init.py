@@ -9,9 +9,11 @@ from unittest.mock import patch
 import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.atmofrance.api import InvalidAuthError
 from custom_components.atmofrance.const import (
     CONF_INCLUDE_POLLUTION,
     CONF_INSEE_CODE,
@@ -229,3 +231,60 @@ async def test_unload_entry(hass):
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.NOT_LOADED
+
+
+# ------------------------------------------------------------ reauth ----
+class RejectingApi(FakeApi):
+    """Credentials no longer accepted."""
+
+    async def get_data(self, code, url_code):
+        raise InvalidAuthError("Atmo France rejected the credentials")
+
+
+async def test_rejected_credentials_at_setup_ask_for_reauth(hass):
+    entry = MockConfigEntry(
+        domain=DOMAIN, data=ENTRY_DATA, options=POLLUTION_ONLY, version=3)
+    entry.add_to_hass(hass)
+
+    with patch("custom_components.atmofrance.AtmoFranceDataApi",
+               side_effect=lambda *a, **k: RejectingApi({})):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.SETUP_ERROR
+    assert any(flow["context"]["source"] == "reauth"
+               for flow in hass.config_entries.flow.async_progress())
+
+
+async def test_rejected_credentials_while_polling_ask_for_reauth(hass):
+    entry = await setup_entry(
+        hass, {(CITY_CODE, URL_CODE.POLLUTION): FEATURES}, POLLUTION_ONLY)
+    coordinator = coordinators(hass, entry)[CONF_POLLUTION_COORDINATOR]
+
+    coordinator.api = RejectingApi({})
+    with pytest.raises(ConfigEntryAuthFailed):
+        await coordinator._update_method()
+
+
+async def test_a_missing_dataset_is_not_an_auth_problem(hass):
+    """Only rejected credentials may interrupt the user."""
+    entry = await setup_entry(
+        hass, {(CITY_CODE, URL_CODE.POLLUTION): FEATURES}, POLLUTION_ONLY)
+    coordinator = coordinators(hass, entry)[CONF_POLLUTION_COORDINATOR]
+
+    coordinator.api = FakeApi({})
+    with pytest.raises(UpdateFailed):
+        await coordinator._update_method()
+
+
+async def test_failed_auth_leaves_no_partial_state_behind(hass):
+    entry = MockConfigEntry(
+        domain=DOMAIN, data=ENTRY_DATA, options=POLLUTION_ONLY, version=3)
+    entry.add_to_hass(hass)
+
+    with patch("custom_components.atmofrance.AtmoFranceDataApi",
+               side_effect=lambda *a, **k: RejectingApi({})):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert entry.entry_id not in hass.data.get(DOMAIN, {})

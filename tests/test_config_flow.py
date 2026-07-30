@@ -13,7 +13,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.atmofrance.api import TooManyRequestsError
+from custom_components.atmofrance.api import InvalidAuthError, TooManyRequestsError
 from custom_components.atmofrance.const import (
     CONF_CODE_POSTAL,
     CONF_INCLUDE_POLLEN,
@@ -48,7 +48,8 @@ async def start(hass):
 
 # ------------------------------------------------- credential errors ----
 @pytest.mark.parametrize(("raised", "expected"), [
-    (ConnectionRefusedError("bad credentials"), "auth"),
+    (ConnectionRefusedError("server error"), "auth"),
+    (InvalidAuthError("bad credentials"), "auth"),
     (TooManyRequestsError("slow down"), "too_many_requests"),
     (ClientError("network down"), "cannot_connect"),
     (TimeoutError(), "cannot_connect"),
@@ -176,3 +177,63 @@ async def test_selecting_no_indicator_is_rejected(hass):
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "need_one_option"}
+
+
+# ---------------------------------------------------------- reauth ----
+def existing_entry(hass):
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="33063", version=3,
+        data={CONF_USERNAME: "user@example.com", CONF_PASSWORD: "vieux"})
+    entry.add_to_hass(hass)
+    return entry
+
+
+async def test_reauth_asks_for_credentials(hass):
+    entry = existing_entry(hass)
+
+    result = await entry.start_reauth_flow(hass)
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+
+
+async def test_reauth_stores_the_new_password(hass):
+    entry = existing_entry(hass)
+    result = await entry.start_reauth_flow(hass)
+
+    with patch_token(), patch(
+            "custom_components.atmofrance.async_setup_entry", return_value=True):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_USERNAME: "user@example.com", CONF_PASSWORD: "nouveau"})
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_PASSWORD] == "nouveau"
+
+
+async def test_reauth_keeps_asking_while_credentials_are_wrong(hass):
+    entry = existing_entry(hass)
+    result = await entry.start_reauth_flow(hass)
+
+    with patch_token(side_effect=InvalidAuthError("nope")):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_USERNAME: "user@example.com", CONF_PASSWORD: "encore faux"})
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "auth"}
+    assert entry.data[CONF_PASSWORD] == "vieux"
+
+
+async def test_reauth_does_not_fire_on_a_network_outage(hass):
+    """A transient failure must not ask the user to retype a valid password."""
+    entry = existing_entry(hass)
+    result = await entry.start_reauth_flow(hass)
+
+    with patch_token(side_effect=ClientError("network down")):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_USERNAME: "user@example.com", CONF_PASSWORD: "bon"})
+
+    assert result["errors"] == {"base": "cannot_connect"}

@@ -15,6 +15,7 @@ from custom_components.atmofrance.api import (
     DEFAULT_TIMEOUT,
     TOKEN_DEFAULT_TTL,
     AtmoFranceDataApi,
+    InvalidAuthError,
     TooManyRequestsError,
     _jwt_expiry,
 )
@@ -165,8 +166,17 @@ async def test_unexpected_payload_returns_none(payload):
     assert await api.get_data("33063", URL_CODE.POLLUTION) is None
 
 
-async def test_rejected_credentials_return_none():
-    api, _ = build([Response(401, {})], [DATA_OK])
+@pytest.mark.parametrize("status", [401, 403])
+async def test_rejected_credentials_propagate_for_reauth(status):
+    """Swallowing this is what used to hide a changed password forever."""
+    api, _ = build([Response(status, {})], [DATA_OK])
+    with pytest.raises(InvalidAuthError):
+        await api.get_data("33063", URL_CODE.POLLUTION)
+
+
+async def test_a_server_error_is_not_an_auth_problem():
+    """A 500 must not send the user off to retype a valid password."""
+    api, _ = build([Response(500, {})], [DATA_OK])
     assert await api.get_data("33063", URL_CODE.POLLUTION) is None
 
 

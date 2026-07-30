@@ -53,6 +53,14 @@ class TooManyRequestsError(Exception):
         self.message = message
 
 
+class InvalidAuthError(Exception):
+    """The credentials were rejected.
+
+    Kept distinct from every other login failure: this is the only one the
+    user can do something about, and the only one worth interrupting them for.
+    """
+
+
 class AtmoFranceDataApi:
     """Api to get AirAtmo data"""
 
@@ -115,6 +123,10 @@ class AtmoFranceDataApi:
         elif request.status == 429:
             raise TooManyRequestsError(
                 f"Too many requests response from the server, please retry in {request.headers.get("Retry-After")} seconds")
+        elif request.status in (401, 403):
+            raise InvalidAuthError(
+                f"Atmo France rejected the credentials with status {request.status}"
+            )
         else:
             raise ConnectionRefusedError(
                 f"Failed to get authent token, with error status : {request.status}"
