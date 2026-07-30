@@ -8,10 +8,12 @@ from unittest.mock import patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryState
+from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.atmofrance.const import (
+    CONF_INCLUDE_POLLUTION,
     CONF_INSEE_CODE,
     CONF_INSEE_EPCI,
     CONF_POLLEN_COORDINATOR,
@@ -188,6 +190,35 @@ async def test_coordinator_returns_the_payload_on_success(hass):
     coordinator = coordinators(hass, entry)[CONF_POLLUTION_COORDINATOR]
 
     assert await coordinator._update_method() == FEATURES
+
+
+# ---------------------------------------------------- options access ----
+async def test_setup_survives_options_missing_a_key(hass):
+    """Direct indexing raised KeyError when a migration left options short."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, data=ENTRY_DATA,
+        options={CONF_INCLUDE_POLLUTION: True}, version=3)
+    entry.add_to_hass(hass)
+
+    with patch_api({(CITY_CODE, URL_CODE.POLLUTION): FEATURES}):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.LOADED
+
+
+# ------------------------------------------------------ options flow ----
+async def test_options_flow_reports_the_missing_indicator_error(hass):
+    """The error was computed and then dropped before reaching the form."""
+    entry = await setup_entry(
+        hass, {(CITY_CODE, URL_CODE.POLLUTION): FEATURES}, POLLUTION_ONLY)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {})
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "need_one_option"}
 
 
 # ----------------------------------------------------------- unload ----

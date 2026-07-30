@@ -47,21 +47,21 @@ async def async_setup_entry(
     config = hass.data[DOMAIN][entry.entry_id]
     entities = []
 
-    if entry.options[CONF_INCLUDE_POLLUTION]:
+    if entry.options.get(CONF_INCLUDE_POLLUTION, False):
         coordinatorpollution = config[CONF_POLLUTION_COORDINATOR]
         for sensor_description in POLLUTION_SENSORS:
             entities.append(
                 AtmoFrancePollutionEntity(hass, entry, sensor_description,
                                           coordinatorpollution))
 
-    if entry.options[CONF_INCLUDE_POLLUTION_FORECAST]:
+    if entry.options.get(CONF_INCLUDE_POLLUTION_FORECAST, False):
         coordinatorpollution = config[CONF_POLLUTION_COORDINATOR]
         for sensor_description in POLLUTION_SENSORS:
             entities.append(
                 AtmoFrancePollutionEntity(hass, entry, sensor_description,
                                           coordinatorpollution, 1))
 
-    if entry.options[CONF_INCLUDE_POLLEN]:
+    if entry.options.get(CONF_INCLUDE_POLLEN, False):
         coordinatorpollen = config[CONF_POLLEN_COORDINATOR]
         for sensor_description in POLLEN_ALERT_SENSORS:
             entities.append(AtmoFrancePollenLevelEntity(
@@ -70,7 +70,7 @@ async def async_setup_entry(
             entities.append(AtmoFrancePollenConcentrationEntity(
                 hass, entry, sensor_description, coordinatorpollen))
 
-    if entry.options[CONF_INCLUDE_POLLEN_FORECAST]:
+    if entry.options.get(CONF_INCLUDE_POLLEN_FORECAST, False):
         coordinatorpollen = config[CONF_POLLEN_COORDINATOR]
         for sensor_description in POLLEN_ALERT_SENSORS:
             entities.append(AtmoFrancePollenLevelEntity(
