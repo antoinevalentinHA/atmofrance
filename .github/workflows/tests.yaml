@@ -3,6 +3,13 @@ name: Tests
 on:
   push:
   pull_request:
+  # requirements_test.txt n'est pas epingle : la suite suit donc la derniere
+  # version de Home Assistant. Sans declenchement periodique, une depreciation
+  # HA ne serait decouverte qu'au prochain push - c'est-a-dire potentiellement
+  # apres qu'elle a casse l'integration en production.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 jobs:
   pytest:
