@@ -100,7 +100,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         # the API build its own would leak one session per setup and reload.
         session = async_get_clientsession(hass)
         try:
-            if entry.options[CONF_INCLUDE_POLLUTION] or entry.options[CONF_INCLUDE_POLLUTION_FORECAST]:
+            if entry.options.get(CONF_INCLUDE_POLLUTION, False) or entry.options.get(CONF_INCLUDE_POLLUTION_FORECAST, False):
                 pollutionapi = AtmoFranceDataApi(
                     entry.data, session, hass=hass)
                 # Get pollution data for city
@@ -115,7 +115,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                     CONF_POLLUTION_COORDINATOR
                 ] = AtmoFrancePollutionApiCoordinator(hass=hass, config=entry, api=pollutionapi, source=source)
 
-            if entry.options[CONF_INCLUDE_POLLEN] or entry.options[CONF_INCLUDE_POLLEN_FORECAST]:
+            if entry.options.get(CONF_INCLUDE_POLLEN, False) or entry.options.get(CONF_INCLUDE_POLLEN_FORECAST, False):
                 _LOGGER.info("Getting Pollen data")
                 pollenapi = AtmoFranceDataApi(entry.data, session, hass=hass)
                 # `source` is resolved again for pollen: pollution and pollen

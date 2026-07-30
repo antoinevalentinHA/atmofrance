@@ -9,7 +9,9 @@ from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from .const import AUTH_URL, DATA_URL, API_GOUV_URL, URL_CODE
 
-DEFAULT_TIMEOUT = 120
+# Applied to every request. 120s used to be declared here and passed nowhere,
+# so a hung connection could tie a coordinator up indefinitely.
+DEFAULT_TIMEOUT = 30
 CLIENT_TIMEOUT = ClientTimeout(total=DEFAULT_TIMEOUT)
 
 # Used when the token carries no readable expiry. Must comfortably exceed
@@ -97,6 +99,7 @@ class AtmoFranceDataApi:
                 "username": self._config[CONF_USERNAME],
                 "password": self._config[CONF_PASSWORD],
             },
+            timeout=self._timeout,
         )
         if request.status == 200:
             resp = await request.json()
@@ -143,7 +146,8 @@ class AtmoFranceDataApi:
             headers = {"Authorization": f"Bearer {self._token}"}
             _LOGGER.debug("Getting data from %s", url)
             try:
-                result = await self._session.get(url, headers=headers)
+                result = await self._session.get(
+                    url, headers=headers, timeout=self._timeout)
                 if result.status in (401, 403) and attempt == 1:
                     _LOGGER.debug(
                         "Token rejected with status %s, renewing it", result.status)
@@ -245,7 +249,7 @@ class INSEEAPI:
         """Get INSEE code for a given zip code"""
         url = f"{API_GOUV_URL}codePostal={
             zipcode}&fields=code,nom,codeEpci&format=json&geometry=centre"
-        result = await self._session.get(url)
+        result = await self._session.get(url, timeout=self._timeout)
         if result.status == 200:
             json = await result.json()
             _LOGGER.debug("Got response for INSEE Code %s ", json)

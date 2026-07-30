@@ -35,7 +35,10 @@ _LOGGER = logging.getLogger(__name__)
 AUTHENT_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_USERNAME, default=""): cv.string,
-        vol.Required(CONF_PASSWORD, default=""): cv.string,
+        # A password selector masks the field; cv.string showed it in clear.
+        vol.Required(CONF_PASSWORD, default=""): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+        ),
     }
 )
 ZIPCODE_SCHEMA = vol.Schema(
@@ -233,7 +236,12 @@ class ConfigOptionFlowHandler(OptionsFlow):
                     CONF_INCLUDE_POLLEN)
                 return await self.async_step_forecast()
 
-        return self.async_show_form(step_id="init", data_schema=self.add_suggested_values_to_schema(INCLUDED_SENSOR_SCHEMA, self.config_entry.options), errors={})
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(
+                INCLUDED_SENSOR_SCHEMA, self.config_entry.options),
+            errors=errors,
+        )
 
     async def async_step_forecast(self, user_input=None) -> ConfigFlowResult:
         errors = {}
@@ -244,4 +252,9 @@ class ConfigOptionFlowHandler(OptionsFlow):
                 CONF_INCLUDE_POLLEN_FORECAST)
             return self.async_create_entry(title=self.config_entry.title, data=self.newOption)
 
-        return self.async_show_form(step_id="forecast", data_schema=self.add_suggested_values_to_schema(INCLUDED_FORECAST_SENSOR_SCHEMA, self.config_entry.options), errors={})
+        return self.async_show_form(
+            step_id="forecast",
+            data_schema=self.add_suggested_values_to_schema(
+                INCLUDED_FORECAST_SENSOR_SCHEMA, self.config_entry.options),
+            errors=errors,
+        )

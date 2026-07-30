@@ -12,6 +12,7 @@ import pytest
 from aiohttp.client import ClientError
 
 from custom_components.atmofrance.api import (
+    DEFAULT_TIMEOUT,
     TOKEN_DEFAULT_TTL,
     AtmoFranceDataApi,
     TooManyRequestsError,
@@ -52,13 +53,16 @@ class FakeSession:
         self._gets = list(get_responses)
         self.posts = 0
         self.gets = 0
+        self.timeouts = []
 
-    async def post(self, url, json=None):
+    async def post(self, url, json=None, timeout=None):
         self.posts += 1
+        self.timeouts.append(timeout)
         return self._logins.pop(0) if len(self._logins) > 1 else self._logins[0]
 
-    async def get(self, url, headers=None):
+    async def get(self, url, headers=None, timeout=None):
         self.gets += 1
+        self.timeouts.append(timeout)
         resp = self._gets.pop(0) if len(self._gets) > 1 else self._gets[0]
         if isinstance(resp, Exception):
             raise resp
@@ -93,6 +97,17 @@ def test_jwt_expiry_tolerates_anything_that_is_not_a_jwt(token):
 def test_default_ttl_outlives_the_refresh_interval():
     """A TTL below the poll interval makes the cache useless."""
     assert TOKEN_DEFAULT_TTL > timedelta(minutes=REFRESH_INTERVALL)
+
+
+# ----------------------------------------------------------- timeouts ----
+async def test_every_request_carries_a_timeout():
+    """The timeout used to be stored and passed to no call at all."""
+    api, session = build(valid_login(), [DATA_OK])
+    await api.get_data("33063", URL_CODE.POLLUTION)
+
+    assert session.timeouts, "no request was made"
+    assert all(t is not None for t in session.timeouts)
+    assert all(t.total == DEFAULT_TIMEOUT for t in session.timeouts)
 
 
 # ------------------------------------------------------- token cache ----
