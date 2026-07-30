@@ -28,7 +28,12 @@ from .const import (
     CONF_INCLUDE_POLLUTION,
     CONF_INCLUDE_POLLUTION_FORECAST,
 )
-from .api import AtmoFranceDataApi, INSEEAPI, TooManyRequestsError
+from .api import (
+    AtmoFranceDataApi,
+    INSEEAPI,
+    InvalidAuthError,
+    TooManyRequestsError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -83,6 +88,19 @@ async def get_insee_code(hass: HomeAssistant, data: dict) -> None:
     return await client.get_data(data)
 
 
+async def _validate_step(hass: HomeAssistant, user_input: dict) -> dict:
+    """Try the credentials, returning the errors dict the form expects."""
+    try:
+        await validate_credentials(hass, user_input)
+    except TooManyRequestsError:
+        return {"base": "too_many_requests"}
+    except (InvalidAuthError, ConnectionRefusedError):
+        return {"base": "auth"}
+    except (ClientError, TimeoutError):
+        return {"base": "cannot_connect"}
+    return {}
+
+
 def _build_place_key(city) -> str:
     return f"{city['code']};{city['nom']};{city['codeEpci']}"
 
@@ -122,19 +140,32 @@ class ConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         _LOGGER.debug("in async_step_user !!")
         if user_input is not None:
-            try:
-                await validate_credentials(self.hass, user_input)
-            except TooManyRequestsError:
-                errors["base"] = "too_many_requests"
-            except ConnectionRefusedError:
-                # Non-200 answer from the API: credentials are the usual cause
-                errors["base"] = "auth"
-            except (ClientError, TimeoutError):
-                errors["base"] = "cannot_connect"
+            errors = await _validate_step(self.hass, user_input)
             if not errors:
                 self.data = user_input
                 return await self.async_step_location()
         return self._show_setup_form("user", user_input, AUTHENT_SCHEMA, errors)
+
+    async def async_step_reauth(self, entry_data):
+        """Triggered by ConfigEntryAuthFailed when the API rejects us."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input=None):
+        """Ask for fresh credentials and keep the existing entry."""
+        errors = {}
+        entry = self._get_reauth_entry()
+        if user_input is not None:
+            errors = await _validate_step(self.hass, user_input)
+            if not errors:
+                return self.async_update_reload_and_abort(
+                    entry, data_updates=user_input)
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=self.add_suggested_values_to_schema(
+                AUTHENT_SCHEMA, {CONF_USERNAME: entry.data.get(CONF_USERNAME)}),
+            errors=errors,
+        )
 
     async def async_step_location(self, user_input=None):
         """Handle location step"""
