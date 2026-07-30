@@ -28,10 +28,19 @@
                 },
                 "title": "Muitos Resultados encontrados",
                 "description": "Seleciona a cidade"
+            },
+            "reauth_confirm": {
+                "title": "Reautenticação",
+                "description": "As tuas credenciais Atmo France foram recusadas. Introduz-as novamente.",
+                "data": {
+                    "username": "Utilizador",
+                    "password": "Senha"
+                }
             }
         },
         "abort": {
-            "already_configured": "Esta cidade já está configurada"
+            "already_configured": "Esta cidade já está configurada",
+            "reauth_successful": "Reautenticação concluída com sucesso"
         }
     }
 }

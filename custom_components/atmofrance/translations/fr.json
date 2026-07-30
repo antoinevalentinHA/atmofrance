@@ -45,10 +45,19 @@
                 },
                 "title": "Sélection des indicateurs prévisionnels",
                 "description": "Selectionnez les indicateurs à inclure"
+            },
+            "reauth_confirm": {
+                "title": "Ré-authentification",
+                "description": "Vos identifiants Atmo France ont été refusés. Saisissez-les à nouveau.",
+                "data": {
+                    "username": "Nom d'utilisateur",
+                    "password": "Mot de passe"
+                }
             }
         },
         "abort": {
-            "already_configured": "Cette commune est déjà configurée"
+            "already_configured": "Cette commune est déjà configurée",
+            "reauth_successful": "Ré-authentification réussie"
         }
     },
     "options": {

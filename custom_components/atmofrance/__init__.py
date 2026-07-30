@@ -4,12 +4,12 @@ from datetime import timedelta, date
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import AtmoFranceDataApi
+from .api import AtmoFranceDataApi, InvalidAuthError
 from .const import (
     DOMAIN,
     PLATFORMS,
@@ -64,7 +64,11 @@ async def _async_resolve_source(entry: ConfigEntry, api, url_code: URL_CODE) -> 
     neither answers. Must be called once per indicator: a city may be covered
     for pollution but not for pollen, and vice versa.
     """
-    databycity = await api.get_data(entry.data[CONF_INSEE_CODE], url_code)
+    try:
+        databycity = await api.get_data(entry.data[CONF_INSEE_CODE], url_code)
+    except InvalidAuthError as err:
+        # Setup is where a changed password surfaces first.
+        raise ConfigEntryAuthFailed(str(err)) from err
     if databycity is not None and len(databycity) > 0:
         # data exist for city, use it
         _LOGGER.info("Use City code: %s as source", entry.data[CONF_INSEE_CODE])
@@ -129,7 +133,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                 hass.data[DOMAIN][entry.entry_id][
                     CONF_POLLEN_COORDINATOR
                 ] = AtmoFrancePollenApiCoordinator(hass=hass, config=entry, api=pollenapi, source=source)
-        except ConfigEntryNotReady:
+        except (ConfigEntryNotReady, ConfigEntryAuthFailed):
             # Drop the partially built entry so the automatic retry rebuilds it
             hass.data[DOMAIN].pop(entry.entry_id, None)
             raise
@@ -185,6 +189,24 @@ class AtmoFranceApiCoordinator(DataUpdateCoordinator):
             entry, [Platform.SENSOR]
         )
 
+    async def _fetch(self, url_code: URL_CODE):
+        """Fetch one indicator, mapping failures onto what HA expects.
+
+        Rejected credentials become ConfigEntryAuthFailed, which is what starts
+        the reauth flow; everything else is a transient UpdateFailed.
+        """
+        try:
+            data = await self.api.get_data(
+                self.config.data[self._source], url_code)
+        except InvalidAuthError as err:
+            raise ConfigEntryAuthFailed(str(err)) from err
+        if not data:
+            raise UpdateFailed(
+                f'No Data from Atmo France for INSEE code {
+                    self.config.data[self._source]} and date {date.today().strftime("%Y-%m-%d")}'
+            )
+        return data
+
 
 class AtmoFrancePollutionApiCoordinator (AtmoFranceApiCoordinator):
     """A coordinator to fetch pollution data from the api only once"""
@@ -193,13 +215,7 @@ class AtmoFrancePollutionApiCoordinator (AtmoFranceApiCoordinator):
         super().__init__(hass, config, api, source,  update_method=self._update_method)
 
     async def _update_method(self):
-        data = await self.api.get_data(self.config.data[self._source], URL_CODE.POLLUTION)
-        if not data:
-            raise UpdateFailed(
-                f'No Data from Atmo France for INSEE code {
-                    self.config.data[self._source]} and date {date.today().strftime("%Y-%m-%d")}'
-            )
-        return data
+        return await self._fetch(URL_CODE.POLLUTION)
 
 
 class AtmoFrancePollenApiCoordinator (AtmoFranceApiCoordinator):
@@ -209,10 +225,4 @@ class AtmoFrancePollenApiCoordinator (AtmoFranceApiCoordinator):
         super().__init__(hass, config, api, source,  update_method=self._update_method)
 
     async def _update_method(self):
-        data = await self.api.get_data(self.config.data[self._source], URL_CODE.POLLEN)
-        if not data:
-            raise UpdateFailed(
-                f'No Data from Atmo France for INSEE code {
-                    self.config.data[self._source]} and date {date.today().strftime("%Y-%m-%d")}'
-            )
-        return data
+        return await self._fetch(URL_CODE.POLLEN)
