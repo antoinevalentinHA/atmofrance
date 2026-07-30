@@ -34,14 +34,12 @@ Les données exposées pour les pollens sont :
 - Niveau Olivier
 - Qualité globale Pollen
 
-Sont disponibles les données pour le jour courant (J) ainsi que les prévisions pour le jour suivant (J+1).
+Sont disponibles les données pour le jour courant (J) ainsi que les prévisions : J+1 pour la pollution, J+1 et J+2 pour les pollens.
 
 > [!IMPORTANT]
-> Prévisions disponibles à J+1, sous réserve de la présence effective des données.
+> Les horizons diffèrent parce que les deux flux ne publient pas la même chose : la pollution expose 2 dates (J et J+1), les pollens en exposent 3 (J, J+1 et J+2).
 >
-> Les données étant rafraîchies à 12h00, entre 00h00 et 12h00 du jour J, les données à J+2 ne sont pas disponibles.
->
-> C'est pour cette raison que les prévisions à J+2 ne sont pas implémentées.
+> Les données étant rafraîchies à 12h00, la prévision la plus lointaine n'est pas disponible entre 00h00 et 12h00 du jour J. Le capteur correspondant est alors à l'état `unknown`, et non à une valeur par défaut : il n'entre donc pas dans les statistiques long terme.
 
 ## Installation
 

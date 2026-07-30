@@ -17,8 +17,10 @@ from .const import (
     DOMAIN,
     ATTRIBUTION,
     POLLUTION_SENSORS,
+    POLLUTION_FORECAST_DAYS,
     POLLEN_ALERT_SENSORS,
     POLLEN_CONC_SENSORS,
+    POLLEN_FORECAST_DAYS,
     CONF_CITY,
     CONF_INSEE_CODE,
     CONF_INCLUDE_POLLEN,
@@ -56,10 +58,11 @@ async def async_setup_entry(
 
     if entry.options.get(CONF_INCLUDE_POLLUTION_FORECAST, False):
         coordinatorpollution = config[CONF_POLLUTION_COORDINATOR]
-        for sensor_description in POLLUTION_SENSORS:
-            entities.append(
-                AtmoFrancePollutionEntity(hass, entry, sensor_description,
-                                          coordinatorpollution, 1))
+        for shift in range(1, POLLUTION_FORECAST_DAYS + 1):
+            for sensor_description in POLLUTION_SENSORS:
+                entities.append(
+                    AtmoFrancePollutionEntity(hass, entry, sensor_description,
+                                              coordinatorpollution, shift))
 
     if entry.options.get(CONF_INCLUDE_POLLEN, False):
         coordinatorpollen = config[CONF_POLLEN_COORDINATOR]
@@ -72,12 +75,13 @@ async def async_setup_entry(
 
     if entry.options.get(CONF_INCLUDE_POLLEN_FORECAST, False):
         coordinatorpollen = config[CONF_POLLEN_COORDINATOR]
-        for sensor_description in POLLEN_ALERT_SENSORS:
-            entities.append(AtmoFrancePollenLevelEntity(
-                hass, entry, sensor_description, coordinatorpollen, 1))
-        for sensor_description in POLLEN_CONC_SENSORS:
-            entities.append(AtmoFrancePollenConcentrationEntity(
-                hass, entry, sensor_description, coordinatorpollen, 1))
+        for shift in range(1, POLLEN_FORECAST_DAYS + 1):
+            for sensor_description in POLLEN_ALERT_SENSORS:
+                entities.append(AtmoFrancePollenLevelEntity(
+                    hass, entry, sensor_description, coordinatorpollen, shift))
+            for sensor_description in POLLEN_CONC_SENSORS:
+                entities.append(AtmoFrancePollenConcentrationEntity(
+                    hass, entry, sensor_description, coordinatorpollen, shift))
 
     async_add_entities(entities, True)
 
