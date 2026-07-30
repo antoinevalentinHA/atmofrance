@@ -5,6 +5,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -95,9 +96,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     if entry.entry_id not in hass.data[DOMAIN]:
         hass.data[DOMAIN][entry.entry_id] = {}
+        # Home Assistant owns this session and closes it on shutdown. Letting
+        # the API build its own would leak one session per setup and reload.
+        session = async_get_clientsession(hass)
         try:
             if entry.options[CONF_INCLUDE_POLLUTION] or entry.options[CONF_INCLUDE_POLLUTION_FORECAST]:
-                pollutionapi = AtmoFranceDataApi(entry.data, hass=hass)
+                pollutionapi = AtmoFranceDataApi(
+                    entry.data, session, hass=hass)
                 # Get pollution data for city
                 _LOGGER.info("Getting Pollution data")
                 source = await _async_resolve_source(entry, pollutionapi, URL_CODE.POLLUTION)
@@ -112,7 +117,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
             if entry.options[CONF_INCLUDE_POLLEN] or entry.options[CONF_INCLUDE_POLLEN_FORECAST]:
                 _LOGGER.info("Getting Pollen data")
-                pollenapi = AtmoFranceDataApi(entry.data, hass=hass)
+                pollenapi = AtmoFranceDataApi(entry.data, session, hass=hass)
                 # `source` is resolved again for pollen: pollution and pollen
                 # zones are independent and must never be inherited.
                 source = await _async_resolve_source(entry, pollenapi, URL_CODE.POLLEN)
