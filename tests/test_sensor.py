@@ -50,7 +50,8 @@ def make_entity(hass, entity_class, description, values, shift=0):
     entry = MockConfigEntry(
         domain=DOMAIN, data=ENTRY_DATA, options=POLLUTION_ONLY, version=3)
     entry.add_to_hass(hass)
-    coordinator = DataUpdateCoordinator(hass, _LOGGER, name="test")
+    coordinator = DataUpdateCoordinator(
+        hass, _LOGGER, name="test", config_entry=entry)
     coordinator.api = StubApi(values)
     return entity_class(hass, entry, description, coordinator, shift)
 

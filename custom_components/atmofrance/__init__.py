@@ -166,7 +166,10 @@ class AtmoFranceApiCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=NAME,  # for logging purpose
-
+            # Passing the entry explicitly: Home Assistant otherwise falls back
+            # to a ContextVar, which only resolves while a setup is in flight
+            # and is on its way out.
+            config_entry=config,
             update_interval=timedelta(minutes=REFRESH_INTERVALL),
         )
         self.config = config
