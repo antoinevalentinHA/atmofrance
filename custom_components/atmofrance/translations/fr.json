@@ -2,6 +2,8 @@
     "config": {
         "error": {
             "auth": "Impossible de recupérer le token. Vérifiez vos identifiants",
+            "cannot_connect": "Service injoignable. Vérifiez votre connexion réseau et les logs.",
+            "too_many_requests": "Trop de requêtes envoyées à l'API Atmo France. Patientez quelques minutes avant de réessayer.",
             "noinsee": "Impossible de récupérer le code INSEE. Vérifiez le code postal et les logs.",
             "need_one_option": "Au moins un des deux indicateurs doit être actif"
         },
