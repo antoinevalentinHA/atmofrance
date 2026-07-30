@@ -139,3 +139,58 @@ async def test_le_dechargement_libere_l_entree(hass):
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.NOT_LOADED
+
+
+# ------------------------------------- absence totale de données ----
+async def test_sans_aucune_donnee_le_setup_demande_une_nouvelle_tentative(hass):
+    """La plateforme sensor plantait sur un KeyError, sans jamais réessayer."""
+    entry = await setup_entry(hass, {}, POLLUTION_ONLY)
+
+    assert entry.state is ConfigEntryState.SETUP_RETRY
+
+
+async def test_un_setup_echoue_ne_laisse_rien_derriere_lui(hass):
+    """Sinon la garde sur entry_id ferait sauter la reconstruction."""
+    entry = await setup_entry(hass, {}, POLLUTION_ONLY)
+
+    assert entry.entry_id not in hass.data.get(DOMAIN, {})
+
+
+async def test_la_nouvelle_tentative_aboutit_quand_l_api_repond(hass):
+    entry = await setup_entry(hass, {}, POLLUTION_ONLY)
+    assert entry.state is ConfigEntryState.SETUP_RETRY
+
+    with patch_api({(CITY_CODE, URL_CODE.POLLUTION): FEATURES}):
+        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.LOADED
+
+
+# ----------------------------------- indépendance pollution / pollen ----
+async def test_le_pollen_n_herite_jamais_de_la_zone_pollution(hass):
+    """La pollution résout sur l'EPCI, le pollen n'a de données nulle part.
+
+    La variable source étant partagée, le pollen réutilisait silencieusement
+    la zone pollution et bâtissait un coordinateur sur une API vide.
+    """
+    entry = await setup_entry(
+        hass, {(EPCI_CODE, URL_CODE.POLLUTION): FEATURES},
+        POLLUTION_AND_POLLEN)
+
+    assert entry.state is ConfigEntryState.SETUP_RETRY
+    assert CONF_POLLEN_COORDINATOR not in coordinators(hass, entry)
+
+
+async def test_chaque_indicateur_resout_sa_propre_zone(hass):
+    """La pollution n'est couverte que par l'EPCI, le pollen que par la commune."""
+    coverage = {
+        (EPCI_CODE, URL_CODE.POLLUTION): FEATURES,
+        (CITY_CODE, URL_CODE.POLLEN): FEATURES,
+    }
+    entry = await setup_entry(hass, coverage, POLLUTION_AND_POLLEN)
+    construits = coordinators(hass, entry)
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert construits[CONF_POLLUTION_COORDINATOR]._source == CONF_INSEE_EPCI
+    assert construits[CONF_POLLEN_COORDINATOR]._source == CONF_INSEE_CODE
