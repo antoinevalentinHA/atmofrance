@@ -86,6 +86,10 @@ class AtmoFranceEntity(CoordinatorEntity, SensorEntity):
     """La classe de l'entité Air Atmo"""
 
     entity_description: AtmoFranceSensorEntityDescription
+    # The device carries the city, so entity names must not repeat it. The
+    # unique_id is unchanged, so existing entities keep their entity_id and
+    # their history; only the displayed name changes.
+    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -99,8 +103,7 @@ class AtmoFranceEntity(CoordinatorEntity, SensorEntity):
 
         self._hass = hass
         self.entity_description = description
-        self._attr_name = f"{
-            description.name}-{entry_infos.data.get(CONF_CITY)}"
+        self._attr_name = description.name
         self._attr_unique_id = f"{
             entry_infos.entry_id}-{entry_infos.data.get(CONF_INSEE_CODE)}-{description.name}"
         self._device_id = entry_infos.entry_id
@@ -110,7 +113,7 @@ class AtmoFranceEntity(CoordinatorEntity, SensorEntity):
         self._attr_device_class = description.device_class
 
         self._attr_device_info = DeviceInfo(
-            name=TITLE,
+            name=f"{TITLE} - {entry_infos.data.get(CONF_CITY)}",
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, f"{coordinator.api.source}-{entry_infos.data.get(CONF_CITY)}")
                          },
@@ -141,7 +144,7 @@ class AtmoFrancePollutionEntity(AtmoFranceEntity):
         self._shift = shift
 
         if (self._shift > 0):
-            self._attr_name = f"{description.name}-{entry_infos.data.get(CONF_CITY)}-J+{self._shift}"
+            self._attr_name = f"{description.name} J+{self._shift}"
             self._attr_unique_id = f"{
                 entry_infos.entry_id}-{entry_infos.data.get(CONF_INSEE_CODE)}-{description.name}-J+{self._shift}"
 
@@ -184,7 +187,7 @@ class AtmoFrancePollenLevelEntity(AtmoFranceEntity):
         self._shift = shift
 
         if (self._shift > 0):
-            self._attr_name = f"{description.name}-{entry_infos.data.get(CONF_CITY)}-J+{self._shift}"
+            self._attr_name = f"{description.name} J+{self._shift}"
             self._attr_unique_id = f"{
                 entry_infos.entry_id}-{entry_infos.data.get(CONF_INSEE_CODE)}-{description.name}-J+{self._shift}"
 
@@ -228,7 +231,7 @@ class AtmoFrancePollenConcentrationEntity(AtmoFranceEntity):
         self._shift = shift
 
         if (self._shift > 0):
-            self._attr_name = f"{description.name}-{entry_infos.data.get(CONF_CITY)}-J+{self._shift}"
+            self._attr_name = f"{description.name} J+{self._shift}"
             self._attr_unique_id = f"{
                 entry_infos.entry_id}-{entry_infos.data.get(CONF_INSEE_CODE)}-{description.name}-J+{self._shift}"
         _LOGGER.debug("In AtmoFrancePollenEntity Creating an atmo France sensor, named %s",

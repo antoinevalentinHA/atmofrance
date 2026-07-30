@@ -46,6 +46,9 @@
                 "title": "Forecast indicator type selection",
                 "description": "Select sensor type"
             }
+        },
+        "abort": {
+            "already_configured": "This city is already configured"
         }
     },
     "options": {

@@ -14,11 +14,13 @@ from .const import AUTH_URL, DATA_URL, API_GOUV_URL, URL_CODE
 DEFAULT_TIMEOUT = 30
 CLIENT_TIMEOUT = ClientTimeout(total=DEFAULT_TIMEOUT)
 
-# Used when the token carries no readable expiry. Must comfortably exceed
-# REFRESH_INTERVALL, otherwise the token is always stale by the time the
-# coordinator polls and the cache buys nothing. Being optimistic is safe here:
-# a token refused early comes back as a 401, which get_data retries after
-# re-authenticating, costing one extra round trip at most.
+# Only used when the token carries no readable expiry. Observed against the
+# live API: it returns a JWT whose exp sits 24h out, so _jwt_expiry answers and
+# this fallback is not normally reached. It stays as a net in case the token
+# format changes, and must comfortably exceed REFRESH_INTERVALL: below it, the
+# token would always be stale by the time the coordinator polls and the cache
+# would buy nothing. Being optimistic is safe: a token refused early comes back
+# as a 401, which get_data retries after re-authenticating.
 TOKEN_DEFAULT_TTL = timedelta(hours=12)
 # Renew slightly early so a token cannot expire in flight.
 TOKEN_EXPIRY_MARGIN = timedelta(seconds=60)

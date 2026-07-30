@@ -46,6 +46,9 @@
                 "title": "Sélection des indicateurs prévisionnels",
                 "description": "Selectionnez les indicateurs à inclure"
             }
+        },
+        "abort": {
+            "already_configured": "Cette commune est déjà configurée"
         }
     },
     "options": {
