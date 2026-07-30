@@ -13,7 +13,6 @@ from homeassistant.components.sensor import (
 DOMAIN = "atmofrance"
 NAME = "Atmo France"
 PLATFORMS: list[Platform] = [Platform.SENSOR]
-CLIENT_TIMEOUT = 10
 BASE_URL = "https://admindata.atmo-france.org"
 AUTH_URL = f"{BASE_URL}/api/login"
 DATA_URL = f"{BASE_URL}/api/data"  # 112 : pollution ; 122 : pollen
