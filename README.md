@@ -1,3 +1,11 @@
+> **Maintained fork.** This fork is loaded by a production Home Assistant installation
+> ([Arsenal](https://github.com/antoinevalentinHA/arsenal)) and is kept in working order for that reason.
+> Served branch: `main`. Upstream: [`sebcaps/atmofrance`](https://github.com/sebcaps/atmofrance).
+> Fixes are proposed upstream whenever upstream can take them.
+> Original upstream README follows.
+
+---
+
 # Atmo France pour Home Assistant
 
 ![downloads](https://img.shields.io/badge/dynamic/json?color=41BDF5&logo=home-assistant&label=integration%20usage&suffix=%20installs&cacheSeconds=15600&url=https://analytics.home-assistant.io/custom_integrations.json&query=$.atmofrance.total)
