@@ -149,11 +149,27 @@ async def test_permanent_401_gives_up_after_two_attempts():
 
 
 # ---------------------------------------------------- error handling ----
-async def test_network_error_returns_none_and_never_the_exception():
-    api, _ = build(valid_login(), [ClientError("boom")])
+@pytest.mark.parametrize("raised", [
+    ClientError("boom"),
+    # Observed in production 2026-08-08: str() is empty, so the log line read
+    # "Failed to get data for INSEE 33063:" and said nothing at all.
+    TimeoutError(),
+    ClientError(),
+])
+async def test_network_error_returns_none_and_never_the_exception(raised):
+    api, _ = build(valid_login(), [raised])
     result = await api.get_data("33063", URL_CODE.POLLUTION)
     assert result is None
     assert not isinstance(result, Exception)
+
+
+async def test_the_log_names_the_exception_type(caplog):
+    """An exception with an empty str() must still identify itself."""
+    api, _ = build(valid_login(), [TimeoutError()])
+
+    await api.get_data("33063", URL_CODE.POLLUTION)
+
+    assert "TimeoutError" in caplog.text
 
 
 @pytest.mark.parametrize("payload", [
