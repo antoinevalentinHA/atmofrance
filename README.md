@@ -1,8 +1,37 @@
-> **Maintained fork.** This fork is loaded by a production Home Assistant installation
-> ([Arsenal](https://github.com/antoinevalentinHA/arsenal)) and is kept in working order for that reason.
-> Served branch: `main`. Upstream: [`sebcaps/atmofrance`](https://github.com/sebcaps/atmofrance).
-> Fixes are proposed upstream whenever upstream can take them.
-> Original upstream README follows.
+> **Fork maintenu.** Ce dépôt est chargé par une installation Home Assistant de production
+> ([Arsenal](https://github.com/antoinevalentinHA/arsenal)) et maintenu en état pour cette raison.
+> Branche servie : `main`. Amont : [`sebcaps/atmofrance`](https://github.com/sebcaps/atmofrance).
+> Les correctifs sont proposés en amont chaque fois qu'il peut les recevoir.
+
+L'intégration d'origine est l'œuvre de [**@sebcaps**](https://github.com/sebcaps). Tout ce qui est
+décrit dans le README ci-dessous vient de lui. Ce fork n'ajoute que des correctifs de fiabilité, une
+suite de tests et une intégration continue — le README original suit après cette section.
+
+## Ce que ce fork corrige
+
+| | Amont | Ici |
+|---|---|---|
+| Aucune donnée publiée pour la commune | plantage au démarrage, aucune entité créée jusqu'à un redémarrage manuel de HA ([#52](https://github.com/sebcaps/atmofrance/issues/52), [#46](https://github.com/sebcaps/atmofrance/issues/46), [#53](https://github.com/sebcaps/atmofrance/issues/53)) | nouvelle tentative automatique, les entités arrivent dès qu'Atmo republie |
+| Valeur absente | forcée à `0`, enregistrée comme une mesure réelle et injectée dans les statistiques long terme | `Inconnu`, exclu des statistiques |
+| Panne de l'API | les capteurs continuent d'afficher les valeurs précédentes sans aucun signal | les entités passent en indisponible, puis reviennent seules |
+| Fenêtre de republication d'Atmo (nuit → ~13h) | une erreur par heure dans le journal, intégration en échec | silencieux, capteurs à `Inconnu` |
+| Mot de passe modifié côté Atmo | erreurs en boucle, aucune notification | notification de réparation avec formulaire de re-authentification |
+| Mauvais identifiants à la configuration | « Unexpected error » avec trace d'appels | message traduit et explicite |
+| Saisie du mot de passe | affiché en clair | masqué |
+| Ré-authentification | à chaque requête, d'où des HTTP 429 | une par jour, token mis en cache |
+| Prévisions pollen | J+1 | J+1 et J+2 |
+| Concentrations de pollen | `device_class` COV et µg/m³ | grains/m³, sans `device_class` erroné |
+| Délais d'attente HTTP | déclarés, appliqués nulle part | appliqués à chaque requête |
+| Tests | aucun | 89, exécutés en CI et chaque lundi contre la dernière version de HA |
+
+Détail complet dans les [releases](https://github.com/antoinevalentinHA/atmofrance/releases).
+
+## Installation
+
+HACS → menu ⋮ → Dépôts personnalisés → `https://github.com/antoinevalentinHA/atmofrance`, catégorie
+*Integration*. Le domaine étant identique à celui de l'amont, une configuration existante est
+conservée : ni les identifiants ni les `entity_id` ne sont perdus. Les deux ne peuvent pas être
+installés simultanément.
 
 ---
 
