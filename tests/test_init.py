@@ -167,14 +167,54 @@ async def test_retry_succeeds_once_the_api_answers(hass):
 
 
 # ------------------------------------------------ coordinator failure ----
-async def test_coordinator_marks_failure_when_the_api_returns_nothing(hass):
+class FailingApi(FakeApi):
+    """The request itself fails: get_data returns None."""
+
+    async def get_data(self, code, url_code):
+        return None
+
+
+class EmptyApi(FakeApi):
+    """The API answers correctly and has no row to give."""
+
+    async def get_data(self, code, url_code):
+        return []
+
+
+async def test_a_failed_request_marks_the_update_failed(hass):
     entry = await setup_entry(
         hass, {(CITY_CODE, URL_CODE.POLLUTION): FEATURES}, POLLUTION_ONLY)
     coordinator = coordinators(hass, entry)[CONF_POLLUTION_COORDINATOR]
 
-    coordinator.api = FakeApi({})
+    coordinator.api = FailingApi({})
     with pytest.raises(UpdateFailed):
         await coordinator._update_method()
+
+
+async def test_an_empty_answer_is_not_a_failure(hass):
+    """Atmo clears its dataset overnight and republishes around midday.
+
+    Answering that with UpdateFailed produced a daily error in the log and
+    left every entity unavailable until the republication.
+    """
+    entry = await setup_entry(
+        hass, {(CITY_CODE, URL_CODE.POLLUTION): FEATURES}, POLLUTION_ONLY)
+    coordinator = coordinators(hass, entry)[CONF_POLLUTION_COORDINATOR]
+
+    coordinator.api = EmptyApi({})
+
+    assert await coordinator._update_method() == []
+
+
+async def test_an_empty_answer_keeps_the_coordinator_healthy(hass):
+    entry = await setup_entry(
+        hass, {(CITY_CODE, URL_CODE.POLLUTION): FEATURES}, POLLUTION_ONLY)
+    coordinator = coordinators(hass, entry)[CONF_POLLUTION_COORDINATOR]
+
+    coordinator.api = EmptyApi({})
+    await coordinator.async_refresh()
+
+    assert coordinator.last_update_success is True
 
 
 async def test_coordinator_failure_reaches_last_update_success(hass):
