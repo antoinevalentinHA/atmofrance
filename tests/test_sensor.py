@@ -218,3 +218,12 @@ async def test_forecast_days_match_what_each_feed_publishes(hass):
     """Pollution exposes 2 dates, pollen 3. Observed on the live API."""
     assert POLLUTION_FORECAST_DAYS == 1
     assert POLLEN_FORECAST_DAYS == 2
+
+
+# ------------------------------------- fenetre sans donnees publiees ----
+async def test_sensors_report_unknown_while_the_dataset_is_empty(hass):
+    """Between the overnight purge and the midday republication."""
+    entity = make_entity(hass, AtmoFrancePollutionEntity, PM10, {})
+
+    assert entity.native_value is None
+    assert entity.extra_state_attributes["Libellé"] is None
