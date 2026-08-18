@@ -127,6 +127,14 @@ Les attributs suivants sont disponibles :
 
 ## Suggestion d'affichage
 
+### Carte Atmo France Card
+Une carte lovelace supportant cette intégration est disponible et permet l'affichage des données avec une configuration minimale.
+Pour l'installation et la configuration, voir [Atmo France Card](https://github.com/Pulpyyyy/atmo-france-card).
+
+> [!IMPORTANT]
+> Il s'agit d'un projet distinct qui s'occupe de l'affichage des données de cette intégration.
+
+
 ### Carte PollenPrognos
 Une carte lovelace supportant cette intégration est disponible et permet l'affichage des données avec une configuration minimale.
 Pour l'installation et la configuration, voir [PollenPrognos](https://github.com/krissen/pollenprognos-card).
