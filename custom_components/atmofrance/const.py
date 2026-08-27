@@ -9,12 +9,14 @@ from homeassistant.components.sensor import (
 
 )
 
-try:
+from homeassistant.const import MAJOR_VERSION, MINOR_VERSION
+
+if (MAJOR_VERSION, MINOR_VERSION) >= (2026, 8):
     # UnitOfDensity.MICROGRAMS_PER_CUBIC_METER n'existe qu'à partir de HA 2026.8
     from homeassistant.const import UnitOfDensity
 
     MICROGRAMS_PER_CUBIC_METER = UnitOfDensity.MICROGRAMS_PER_CUBIC_METER
-except ImportError:
+else:
     # CONCENTRATION_MICROGRAMS_PER_CUBIC_METER est dépréciée et sera supprimée en HA 2027.8
     from homeassistant.const import CONCENTRATION_MICROGRAMS_PER_CUBIC_METER
 
