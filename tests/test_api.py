@@ -7,6 +7,7 @@ from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
+from aiohttp.client import ClientError
 
 from custom_components.atmofrance.api import (
     AtmoFranceDataApi,
@@ -138,3 +139,34 @@ async def test_insee_leve_sur_une_erreur_http():
     api = INSEEAPI(FakeSession(get=Response(500, {})))
     with pytest.raises(ValueError):
         await api.get_data("33000")
+
+
+# --------------------------------------------- erreurs de transport ----
+class FailingSession(FakeSession):
+    """La requête de données lève une erreur réseau."""
+
+    async def get(self, url, headers=None, **kwargs):
+        self.gets += 1
+        raise ClientError("connexion perdue")
+
+
+async def test_une_erreur_reseau_renvoie_none_et_jamais_l_exception():
+    """L'objet exception était retourné, et les appelants faisaient len() dessus."""
+    api = AtmoFranceDataApi(ENTRY_DATA, FailingSession(), hass=FAKE_HASS)
+
+    resultat = await api.get_data("33063", URL_CODE.POLLUTION)
+
+    assert resultat is None
+    assert not isinstance(resultat, Exception)
+
+
+@pytest.mark.parametrize("charge", [
+    "<html>erreur</html>",
+    {"message": "quota depasse"},
+    None,
+])
+async def test_une_charge_utile_inattendue_renvoie_none(charge):
+    """json['features'] levait un KeyError sur une réponse hors format."""
+    api, _ = build(get=Response(200, charge))
+
+    assert await api.get_data("33063", URL_CODE.POLLUTION) is None
