@@ -241,3 +241,9 @@ async def test_get_key_value_variants():
     # a real 0 must survive, not be mistaken for "absent"
     assert api.get_key_value("code_o3", 0) == 0
     assert api.get_key_value("code_pm10", 0) == 2
+
+
+async def test_the_timeout_leaves_room_for_a_slow_api():
+    """30s was observed timing out on consecutive hourly cycles."""
+    assert DEFAULT_TIMEOUT >= 60
+    assert DEFAULT_TIMEOUT < REFRESH_INTERVALL * 60
